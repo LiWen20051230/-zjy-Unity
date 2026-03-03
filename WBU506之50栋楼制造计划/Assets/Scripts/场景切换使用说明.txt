@@ -1,0 +1,79 @@
+# 场景切换系统使用说明
+
+## 功能介绍
+实现点击物体后，场景先进行模糊处理，然后平滑切换到另一个场景。
+
+## 使用步骤
+
+### 1. 设置场景过渡管理器
+- 在场景中创建一个空物体（GameObject → Create Empty）
+- 命名为 "SceneTransitionManager"
+- 添加 SceneTransitionManager 脚本
+- 配置参数：
+  * Transition Duration: 过渡总时长（默认1.5秒）
+  * Max Blur Intensity: 最大模糊强度（默认5）
+  * Global Volume: 可选，留空会自动创建
+
+### 2. 设置可点击物体
+- 选择场景中要点击的物体
+- 确保物体有 Collider 组件（Box Collider、Sphere Collider等）
+- 添加 ClickableObject 脚本
+- 配置参数：
+  * Target Scene Name: 目标场景名称（如 "Scene2"）
+  * Target Scene Index: 或使用场景索引（-1表示使用名称）
+  * Enable Highlight: 是否启用鼠标悬停高亮
+  * Hover Color: 悬停时的颜色
+
+### 3. 添加场景到Build Settings
+重要！必须将目标场景添加到构建设置中：
+- File → Build Settings
+- 点击 "Add Open Scenes" 或拖拽场景文件到列表
+- 确保所有需要切换的场景都在列表中
+
+### 4. 测试
+- 运行游戏
+- 鼠标悬停在可点击物体上会看到高亮效果
+- 点击物体会触发模糊效果并切换场景
+
+## 高级用法
+
+### 通过代码触发场景切换
+```csharp
+// 使用场景名称
+SceneTransitionManager.Instance.TransitionToScene("MyScene");
+
+// 使用场景索引
+SceneTransitionManager.Instance.TransitionToScene(1);
+```
+
+### 自定义模糊效果
+在 SceneTransitionManager 的 Inspector 中调整：
+- Transition Duration: 控制过渡速度
+- Max Blur Intensity: 控制模糊程度
+
+### 多个可点击物体
+可以在场景中添加多个 ClickableObject，每个指向不同的场景。
+
+## 注意事项
+
+1. 确保场景中有 Main Camera
+2. 可点击物体必须有 Collider 组件
+3. 目标场景必须添加到 Build Settings
+4. SceneTransitionManager 会自动在场景切换时保持存在（DontDestroyOnLoad）
+5. 如果使用URP，确保项目已正确配置后处理效果
+
+## 故障排除
+
+问题：点击没有反应
+- 检查物体是否有 Collider
+- 检查 Console 是否有错误信息
+- 确保场景中有 SceneTransitionManager
+
+问题：场景切换但没有模糊效果
+- 检查项目是否使用 URP
+- 确保 Volume 组件正确配置
+- 查看 Console 是否有警告
+
+问题：场景切换失败
+- 确保目标场景已添加到 Build Settings
+- 检查场景名称拼写是否正确
