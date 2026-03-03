@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 3745984}
   - component: {fileID: 3745983}
   - component: {fileID: 3745982}
+  - component: {fileID: 3745986}
   m_Layer: 0
   m_Name: "\u623F\u5B502"
   m_TagString: Untagged
@@ -227,6 +228,68 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 5, y: 1.21, z: 0}
   m_LocalScale: {x: 1.5657, y: 1.5657, z: 1.5657}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3745986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3745981}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClickableObject
+  targetSceneName: "\u623F\u5B502"
+  targetSceneIndex: -1
+  hoverColor: {r: 1, g: 1, b: 0.5, a: 1}
+  enableHighlight: 1
+--- !u!1 &246425772
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 246425774}
+  - component: {fileID: 246425773}
+  m_Layer: 0
+  m_Name: SceneTransitionManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &246425773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 246425772}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneTransitionManager
+  fadeDuration: 0.6
+  fadeColor: {r: 0, g: 0, b: 0, a: 1}
+--- !u!4 &246425774
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 246425772}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.67844, y: 0.5, z: 0.07239}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -577,6 +640,7 @@ GameObject:
   - component: {fileID: 950883849}
   - component: {fileID: 950883848}
   - component: {fileID: 950883847}
+  - component: {fileID: 950883851}
   m_Layer: 0
   m_Name: "\u623F\u5B501"
   m_TagString: Untagged
@@ -677,6 +741,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &950883851
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 950883846}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClickableObject
+  targetSceneName: "\u623F\u5B501"
+  targetSceneIndex: -1
+  hoverColor: {r: 1, g: 1, b: 0.5, a: 1}
+  enableHighlight: 1
 --- !u!1 &1546876556
 GameObject:
   m_ObjectHideFlags: 0
@@ -799,3 +879,4 @@ SceneRoots:
   - {fileID: 1546876560}
   - {fileID: 950883850}
   - {fileID: 3745985}
+  - {fileID: 246425774}

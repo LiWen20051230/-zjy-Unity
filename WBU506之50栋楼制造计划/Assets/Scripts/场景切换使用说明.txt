@@ -1,7 +1,7 @@
 # 场景切换系统使用说明
 
 ## 功能介绍
-实现点击物体后，场景先进行模糊处理，然后平滑切换到另一个场景。
+实现点击物体后，屏幕渐渐变黑，切换到另一个场景，然后从黑色渐渐变亮。
 
 ## 使用步骤
 
@@ -10,9 +10,8 @@
 - 命名为 "SceneTransitionManager"
 - 添加 SceneTransitionManager 脚本
 - 配置参数：
-  * Transition Duration: 过渡总时长（默认1.5秒）
-  * Max Blur Intensity: 最大模糊强度（默认5）
-  * Global Volume: 可选，留空会自动创建
+  * Fade Duration: 淡入淡出持续时间（默认1秒）
+  * Fade Color: 淡出颜色（默认黑色）
 
 ### 2. 设置可点击物体
 - 选择场景中要点击的物体
@@ -33,7 +32,15 @@
 ### 4. 测试
 - 运行游戏
 - 鼠标悬停在可点击物体上会看到高亮效果
-- 点击物体会触发模糊效果并切换场景
+- 点击物体会触发淡出效果（变黑）→ 切换场景 → 淡入效果（变亮）
+
+## 效果说明
+
+过渡流程：
+1. 点击物体
+2. 屏幕渐渐变黑（Fade Out）
+3. 加载新场景
+4. 屏幕从黑色渐渐变亮（Fade In）
 
 ## 高级用法
 
@@ -44,12 +51,18 @@ SceneTransitionManager.Instance.TransitionToScene("MyScene");
 
 // 使用场景索引
 SceneTransitionManager.Instance.TransitionToScene(1);
+
+// 单独使用淡出效果
+StartCoroutine(SceneTransitionManager.Instance.FadeOut());
+
+// 单独使用淡入效果
+StartCoroutine(SceneTransitionManager.Instance.FadeIn());
 ```
 
-### 自定义模糊效果
+### 自定义淡入淡出效果
 在 SceneTransitionManager 的 Inspector 中调整：
-- Transition Duration: 控制过渡速度
-- Max Blur Intensity: 控制模糊程度
+- Fade Duration: 控制淡入淡出速度（数值越大越慢）
+- Fade Color: 改变淡出颜色（默认黑色，也可以用白色等）
 
 ### 多个可点击物体
 可以在场景中添加多个 ClickableObject，每个指向不同的场景。
@@ -60,7 +73,7 @@ SceneTransitionManager.Instance.TransitionToScene(1);
 2. 可点击物体必须有 Collider 组件
 3. 目标场景必须添加到 Build Settings
 4. SceneTransitionManager 会自动在场景切换时保持存在（DontDestroyOnLoad）
-5. 如果使用URP，确保项目已正确配置后处理效果
+5. 淡入淡出画布会自动创建，无需手动添加UI
 
 ## 故障排除
 
@@ -69,11 +82,16 @@ SceneTransitionManager.Instance.TransitionToScene(1);
 - 检查 Console 是否有错误信息
 - 确保场景中有 SceneTransitionManager
 
-问题：场景切换但没有模糊效果
-- 检查项目是否使用 URP
-- 确保 Volume 组件正确配置
+问题：场景切换但没有淡入淡出效果
+- 检查 Fade Duration 是否设置为0
+- 确保 SceneTransitionManager 正确初始化
 - 查看 Console 是否有警告
 
 问题：场景切换失败
 - 确保目标场景已添加到 Build Settings
 - 检查场景名称拼写是否正确
+- 确认场景索引是否正确（从0开始）
+
+问题：淡入淡出画布遮挡了UI
+- SceneTransitionManager 的画布层级最高（sortingOrder = 9999）
+- 这是正常的，确保过渡效果在最上层显示

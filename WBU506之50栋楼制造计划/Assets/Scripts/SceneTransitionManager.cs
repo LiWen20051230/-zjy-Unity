@@ -1,26 +1,22 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 using System.Collections;
 
 /// <summary>
-/// 场景过渡管理器 - 处理模糊效果和场景切换
+/// 场景过渡管理器 - 处理淡入淡出效果和场景切换
 /// </summary>
 public class SceneTransitionManager : MonoBehaviour
 {
     [Header("过渡设置")]
-    [Tooltip("模糊过渡持续时间")]
-    public float transitionDuration = 1.5f;
+    [Tooltip("淡入淡出持续时间（秒）")]
+    public float fadeDuration = 1f;
     
-    [Tooltip("最大模糊强度")]
-    public float maxBlurIntensity = 5f;
+    [Tooltip("淡出颜色")]
+    public Color fadeColor = Color.black;
 
-    [Header("Volume设置")]
-    [Tooltip("全局Volume组件（用于后处理效果）")]
-    public Volume globalVolume;
-
-    private DepthOfField depthOfField;
+    private Canvas fadeCanvas;
+    private Image fadeImage;
     private static SceneTransitionManager instance;
 
     public static SceneTransitionManager Instance
@@ -48,52 +44,52 @@ public class SceneTransitionManager : MonoBehaviour
             return;
         }
 
-        InitializeVolume();
+        InitializeFadeCanvas();
     }
 
     /// <summary>
-    /// 初始化Volume和景深效果
+    /// 初始化淡入淡出画布
     /// </summary>
-    void InitializeVolume()
+    void InitializeFadeCanvas()
     {
-        // 如果没有指定Volume，尝试查找
-        if (globalVolume == null)
-        {
-            globalVolume = FindObjectOfType<Volume>();
-        }
+        // 创建Canvas
+        GameObject canvasObj = new GameObject("FadeCanvas");
+        canvasObj.transform.SetParent(transform);
+        
+        fadeCanvas = canvasObj.AddComponent<Canvas>();
+        fadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        fadeCanvas.sortingOrder = 9999; // 确保在最上层
+        
+        // 添加CanvasScaler
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        
+        // 添加GraphicRaycaster
+        canvasObj.AddComponent<GraphicRaycaster>();
 
-        // 如果还是没有，创建一个
-        if (globalVolume == null)
-        {
-            GameObject volumeObj = new GameObject("Global Volume");
-            globalVolume = volumeObj.AddComponent<Volume>();
-            globalVolume.isGlobal = true;
-            globalVolume.priority = 1;
-            
-            // 创建新的Volume Profile
-            VolumeProfile profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            globalVolume.profile = profile;
-            
-            DontDestroyOnLoad(volumeObj);
-        }
+        // 创建黑色遮罩Image
+        GameObject imageObj = new GameObject("FadeImage");
+        imageObj.transform.SetParent(canvasObj.transform, false);
+        
+        fadeImage = imageObj.AddComponent<Image>();
+        fadeImage.color = fadeColor;
+        
+        // 设置为全屏
+        RectTransform rectTransform = fadeImage.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.sizeDelta = Vector2.zero;
+        rectTransform.anchoredPosition = Vector2.zero;
 
-        // 获取或添加景深效果
-        if (globalVolume.profile.TryGet(out depthOfField))
-        {
-            depthOfField.active = false;
-        }
-        else
-        {
-            depthOfField = globalVolume.profile.Add<DepthOfField>();
-            depthOfField.active = false;
-        }
-
-        // 设置景深模式为高斯模糊
-        depthOfField.mode.Override(DepthOfFieldMode.Gaussian);
+        // 初始设置为透明（不可见）
+        SetFadeAlpha(0f);
+        
+        DontDestroyOnLoad(canvasObj);
     }
 
     /// <summary>
-    /// 带模糊效果的场景切换
+    /// 带淡入淡出效果的场景切换
     /// </summary>
     public void TransitionToScene(string sceneName)
     {
@@ -101,7 +97,7 @@ public class SceneTransitionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 带模糊效果的场景切换（使用场景索引）
+    /// 带淡入淡出效果的场景切换（使用场景索引）
     /// </summary>
     public void TransitionToScene(int sceneIndex)
     {
@@ -110,8 +106,8 @@ public class SceneTransitionManager : MonoBehaviour
 
     private IEnumerator TransitionCoroutine(string sceneName)
     {
-        // 启用模糊效果
-        yield return StartCoroutine(FadeBlur(0f, maxBlurIntensity, transitionDuration * 0.5f));
+        // 淡出到黑色
+        yield return StartCoroutine(FadeOut());
         
         // 加载新场景
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
@@ -128,17 +124,14 @@ public class SceneTransitionManager : MonoBehaviour
         // 等待场景激活
         yield return new WaitForSeconds(0.1f);
 
-        // 淡出模糊效果
-        yield return StartCoroutine(FadeBlur(maxBlurIntensity, 0f, transitionDuration * 0.5f));
-        
-        // 禁用模糊效果
-        depthOfField.active = false;
+        // 从黑色淡入
+        yield return StartCoroutine(FadeIn());
     }
 
     private IEnumerator TransitionCoroutine(int sceneIndex)
     {
-        // 启用模糊效果
-        yield return StartCoroutine(FadeBlur(0f, maxBlurIntensity, transitionDuration * 0.5f));
+        // 淡出到黑色
+        yield return StartCoroutine(FadeOut());
         
         // 加载新场景
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneIndex);
@@ -155,38 +148,56 @@ public class SceneTransitionManager : MonoBehaviour
         // 等待场景激活
         yield return new WaitForSeconds(0.1f);
 
-        // 淡出模糊效果
-        yield return StartCoroutine(FadeBlur(maxBlurIntensity, 0f, transitionDuration * 0.5f));
-        
-        // 禁用模糊效果
-        depthOfField.active = false;
+        // 从黑色淡入
+        yield return StartCoroutine(FadeIn());
     }
 
     /// <summary>
-    /// 模糊效果渐变
+    /// 淡出效果（渐渐变黑）
     /// </summary>
-    private IEnumerator FadeBlur(float startIntensity, float endIntensity, float duration)
+    public IEnumerator FadeOut()
     {
-        depthOfField.active = true;
         float elapsed = 0f;
 
-        while (elapsed < duration)
+        while (elapsed < fadeDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            
-            // 使用平滑曲线
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-            float currentIntensity = Mathf.Lerp(startIntensity, endIntensity, smoothT);
-            
-            depthOfField.gaussianStart.Override(0f);
-            depthOfField.gaussianEnd.Override(currentIntensity);
-            depthOfField.gaussianMaxRadius.Override(1f);
-
+            float alpha = Mathf.Clamp01(elapsed / fadeDuration);
+            SetFadeAlpha(alpha);
             yield return null;
         }
 
-        // 确保最终值准确
-        depthOfField.gaussianEnd.Override(endIntensity);
+        SetFadeAlpha(1f);
+    }
+
+    /// <summary>
+    /// 淡入效果（从黑色渐渐变亮）
+    /// </summary>
+    public IEnumerator FadeIn()
+    {
+        float elapsed = 0f;
+
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float alpha = 1f - Mathf.Clamp01(elapsed / fadeDuration);
+            SetFadeAlpha(alpha);
+            yield return null;
+        }
+
+        SetFadeAlpha(0f);
+    }
+
+    /// <summary>
+    /// 设置遮罩透明度
+    /// </summary>
+    private void SetFadeAlpha(float alpha)
+    {
+        if (fadeImage != null)
+        {
+            Color color = fadeImage.color;
+            color.a = alpha;
+            fadeImage.color = color;
+        }
     }
 }
