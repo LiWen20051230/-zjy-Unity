@@ -52,9 +52,8 @@ public class SceneTransitionManager : MonoBehaviour
     /// </summary>
     void InitializeFadeCanvas()
     {
-        // 创建Canvas
+        // 创建Canvas（作为根物体，不设置父物体）
         GameObject canvasObj = new GameObject("FadeCanvas");
-        canvasObj.transform.SetParent(transform);
         
         fadeCanvas = canvasObj.AddComponent<Canvas>();
         fadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -85,6 +84,7 @@ public class SceneTransitionManager : MonoBehaviour
         // 初始设置为透明（不可见）
         SetFadeAlpha(0f);
         
+        // Canvas必须是根物体才能使用DontDestroyOnLoad
         DontDestroyOnLoad(canvasObj);
     }
 
