@@ -3,12 +3,29 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 
 /// <summary>
+/// 点击行为枚举
+/// </summary>
+public enum ClickBehavior
+{
+    FocusBuilding,      // 聚焦建筑物
+    SceneTransition     // 场景切换
+}
+
+/// <summary>
 /// 可点击建筑组 - 支持多个子物体的整体高亮和点击
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class ClickableBuildingGroup : MonoBehaviour
 {
-    [Header("场景设置")]
+    [Header("交互模式")]
+    [Tooltip("点击后的行为")]
+    public ClickBehavior clickBehavior = ClickBehavior.FocusBuilding;
+    
+    [Header("聚焦设置（仅用于FocusBuilding模式）")]
+    [Tooltip("自定义镜头目标位置（留空则自动计算）")]
+    public Transform customCameraTarget;
+    
+    [Header("场景设置（仅用于SceneTransition模式）")]
     [Tooltip("目标场景名称")]
     public string targetSceneName;
     
@@ -163,8 +180,54 @@ public class ClickableBuildingGroup : MonoBehaviour
     /// </summary>
     void OnClicked()
     {
-        Debug.Log($"点击了建筑 {gameObject.name}，准备切换场景...");
+        Debug.Log($"点击了建筑 {gameObject.name}");
 
+        // 根据点击行为执行不同操作
+        switch (clickBehavior)
+        {
+            case ClickBehavior.FocusBuilding:
+                FocusOnThisBuilding();
+                break;
+                
+            case ClickBehavior.SceneTransition:
+                TransitionToScene();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 聚焦到当前建筑物
+    /// </summary>
+    void FocusOnThisBuilding()
+    {
+        // 检查BuildingFocusManager是否存在
+        if (BuildingFocusManager.Instance == null)
+        {
+            Debug.LogError("场景中没有BuildingFocusManager！请添加该组件。");
+            return;
+        }
+
+        // 如果有自定义镜头目标，使用自定义位置
+        if (customCameraTarget != null)
+        {
+            BuildingFocusManager.Instance.FocusOnBuildingWithCustomTarget(
+                gameObject, 
+                customCameraTarget.position, 
+                customCameraTarget.rotation
+            );
+        }
+        else
+        {
+            // 否则使用自动计算的位置
+            BuildingFocusManager.Instance.FocusOnBuilding(gameObject);
+        }
+    }
+
+    /// <summary>
+    /// 切换场景
+    /// </summary>
+    void TransitionToScene()
+    {
         // 检查SceneTransitionManager是否存在
         if (SceneTransitionManager.Instance == null)
         {
@@ -172,14 +235,24 @@ public class ClickableBuildingGroup : MonoBehaviour
             return;
         }
 
-        // 切换场景
+        // 获取建筑的中心位置作为目标点
+        Vector3 targetPosition = transform.position;
+        
+        // 如果有Renderer，使用bounds的中心
+        Renderer renderer = GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            targetPosition = renderer.bounds.center;
+        }
+
+        // 使用带镜头移动的场景切换
         if (targetSceneIndex >= 0)
         {
-            SceneTransitionManager.Instance.TransitionToScene(targetSceneIndex);
+            SceneTransitionManager.Instance.TransitionToSceneWithCamera(targetSceneIndex, targetPosition);
         }
         else if (!string.IsNullOrEmpty(targetSceneName))
         {
-            SceneTransitionManager.Instance.TransitionToScene(targetSceneName);
+            SceneTransitionManager.Instance.TransitionToSceneWithCamera(targetSceneName, targetPosition);
         }
         else
         {
