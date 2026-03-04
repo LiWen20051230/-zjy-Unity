@@ -26,17 +26,11 @@ public class SceneTransitionManager : MonoBehaviour
     public Color fadeColor = Color.black;
 
     [Header("镜头移动设置")]
-    [Tooltip("镜头移动持续时间")]
-    public float cameraMoveTime = 1.5f;
+    [Tooltip("镜头移动速度（越小越慢）")]
+    public float cameraMoveSpeed = 2f;
     
     [Tooltip("镜头移动到目标的距离偏移")]
     public float cameraDistanceOffset = 3f;
-    
-    [Tooltip("最小安全距离（防止穿模）")]
-    public float minSafeDistance = 2f;
-    
-    [Tooltip("当距离太近时的行为")]
-    public CameraMoveBehavior nearBehavior = CameraMoveBehavior.MoveBack;
 
     private Canvas fadeCanvas;
     private Image fadeImage;
@@ -145,10 +139,11 @@ public class SceneTransitionManager : MonoBehaviour
 
     private IEnumerator TransitionCoroutine(string sceneName, Vector3? targetPosition)
     {
-        // 如果提供了目标位置，先移动镜头
+        // 如果提供了目标位置，同时开始镜头移动和淡出
         if (targetPosition.HasValue)
         {
-            yield return StartCoroutine(MoveCameraToTarget(targetPosition.Value));
+            // 启动镜头移动（不等待完成）
+            StartCoroutine(MoveCameraToTargetSlow(targetPosition.Value));
         }
 
         // 淡出到黑色
@@ -175,10 +170,11 @@ public class SceneTransitionManager : MonoBehaviour
 
     private IEnumerator TransitionCoroutine(int sceneIndex, Vector3? targetPosition)
     {
-        // 如果提供了目标位置，先移动镜头
+        // 如果提供了目标位置，同时开始镜头移动和淡出
         if (targetPosition.HasValue)
         {
-            yield return StartCoroutine(MoveCameraToTarget(targetPosition.Value));
+            // 启动镜头移动（不等待完成）
+            StartCoroutine(MoveCameraToTargetSlow(targetPosition.Value));
         }
 
         // 淡出到黑色
@@ -204,9 +200,9 @@ public class SceneTransitionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 移动镜头到目标位置
+    /// 缓慢移动镜头到目标位置（持续移动，不受淡出时间限制）
     /// </summary>
-    private IEnumerator MoveCameraToTarget(Vector3 targetPosition)
+    private IEnumerator MoveCameraToTargetSlow(Vector3 targetPosition)
     {
         Camera mainCamera = Camera.main;
         if (mainCamera == null)
@@ -227,55 +223,11 @@ public class SceneTransitionManager : MonoBehaviour
         Vector3 startPosition = mainCamera.transform.position;
         Quaternion startRotation = mainCamera.transform.rotation;
 
-        // 计算到目标的距离和方向
+        // 计算到目标的方向
         Vector3 directionToTarget = (targetPosition - startPosition).normalized;
-        float distanceToTarget = Vector3.Distance(startPosition, targetPosition);
-
-        // 智能计算最终位置
-        Vector3 finalPosition;
-        bool shouldMove = true;
         
-        if (distanceToTarget <= minSafeDistance)
-        {
-            // 距离太近，根据设置的行为处理
-            switch (nearBehavior)
-            {
-                case CameraMoveBehavior.MoveBack:
-                    // 向后退到安全距离
-                    finalPosition = startPosition - mainCamera.transform.forward * (minSafeDistance - distanceToTarget + 1f);
-                    Debug.Log($"镜头距离目标太近({distanceToTarget:F2}米)，向后退到安全距离");
-                    break;
-                    
-                case CameraMoveBehavior.StayInPlace:
-                    // 保持原位不动
-                    finalPosition = startPosition;
-                    Debug.Log($"镜头距离目标太近({distanceToTarget:F2}米)，保持当前位置");
-                    break;
-                    
-                case CameraMoveBehavior.OnlyRotate:
-                    // 只旋转不移动
-                    finalPosition = startPosition;
-                    shouldMove = false;
-                    Debug.Log($"镜头距离目标太近({distanceToTarget:F2}米)，只旋转朝向目标");
-                    break;
-                    
-                default:
-                    finalPosition = startPosition;
-                    break;
-            }
-        }
-        else if (distanceToTarget <= cameraDistanceOffset * 1.5f)
-        {
-            // 距离适中，保持当前位置
-            finalPosition = startPosition;
-            Debug.Log($"镜头距离目标适中({distanceToTarget:F2}米)，保持当前位置");
-        }
-        else
-        {
-            // 距离较远，正常靠近
-            finalPosition = targetPosition - directionToTarget * cameraDistanceOffset;
-            Debug.Log($"镜头距离目标较远({distanceToTarget:F2}米)，向目标靠近");
-        }
+        // 计算最终位置（在目标前方一定距离）
+        Vector3 finalPosition = targetPosition - directionToTarget * cameraDistanceOffset;
 
         // 计算目标旋转（看向目标点）
         Vector3 lookDirection = targetPosition - finalPosition;
@@ -283,43 +235,29 @@ public class SceneTransitionManager : MonoBehaviour
             ? Quaternion.LookRotation(lookDirection) 
             : startRotation;
 
-        float elapsed = 0f;
-        float moveAndFadeDuration = cameraMoveTime;
+        Debug.Log($"开始缓慢移动镜头，速度: {cameraMoveSpeed}");
 
-        while (elapsed < moveAndFadeDuration)
+        // 持续移动直到到达目标或场景切换
+        while (mainCamera != null && Vector3.Distance(mainCamera.transform.position, finalPosition) > 0.1f)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / moveAndFadeDuration;
+            // 使用固定速度移动
+            mainCamera.transform.position = Vector3.MoveTowards(
+                mainCamera.transform.position, 
+                finalPosition, 
+                cameraMoveSpeed * Time.deltaTime
+            );
             
-            // 使用平滑曲线
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-            
-            // 移动镜头（如果需要）
-            if (shouldMove)
-            {
-                mainCamera.transform.position = Vector3.Lerp(startPosition, finalPosition, smoothT);
-            }
-            
-            // 旋转镜头
-            mainCamera.transform.rotation = Quaternion.Slerp(startRotation, finalRotation, smoothT);
-            
-            // 同时开始淡出（在移动的后半段）
-            if (t > 0.3f)
-            {
-                float fadeT = (t - 0.3f) / 0.7f;
-                SetFadeAlpha(fadeT);
-            }
+            // 平滑旋转
+            mainCamera.transform.rotation = Quaternion.RotateTowards(
+                mainCamera.transform.rotation,
+                finalRotation,
+                cameraMoveSpeed * 30f * Time.deltaTime
+            );
 
             yield return null;
         }
 
-        // 确保最终位置准确
-        if (shouldMove)
-        {
-            mainCamera.transform.position = finalPosition;
-        }
-        mainCamera.transform.rotation = finalRotation;
-        SetFadeAlpha(1f);
+        Debug.Log("镜头移动完成或场景已切换");
     }
 
     /// <summary>
