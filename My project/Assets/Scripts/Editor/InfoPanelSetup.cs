@@ -18,13 +18,24 @@ public class InfoPanelSetup : EditorWindow
             GameObject canvasObj = new GameObject("Canvas");
             canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
+            
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            
             canvasObj.AddComponent<GraphicRaycaster>();
+            
+            Debug.Log("创建了新的 Canvas");
         }
 
-        // 创建信息面板
+        // 创建信息面板根对象
         GameObject panelRoot = new GameObject("InfoPanelManager");
         panelRoot.transform.SetParent(canvas.transform, false);
+        
+        RectTransform rootRect = panelRoot.AddComponent<RectTransform>();
+        rootRect.anchorMin = Vector2.zero;
+        rootRect.anchorMax = Vector2.one;
+        rootRect.sizeDelta = Vector2.zero;
 
         // 添加 InfoPanel 脚本
         InfoPanel infoPanel = panelRoot.AddComponent<InfoPanel>();
@@ -38,12 +49,15 @@ public class InfoPanelSetup : EditorWindow
         panelRect.anchorMin = new Vector2(1, 1);
         panelRect.anchorMax = new Vector2(1, 1);
         panelRect.pivot = new Vector2(1, 1);
-        // 位置：距离右边20，距离上边20
-        panelRect.anchoredPosition = new Vector2(-20, -20);
-        panelRect.sizeDelta = new Vector2(350, 250);
+        // 位置：从右上角偏移
+        panelRect.anchoredPosition = new Vector2(-30, -30);
+        panelRect.sizeDelta = new Vector2(380, 280);
 
         Image panelImage = panel.AddComponent<Image>();
-        panelImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+        panelImage.color = new Color(0.05f, 0.05f, 0.05f, 0.95f);
+        
+        // 添加 CanvasGroup
+        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
 
         // 创建标题
         GameObject title = new GameObject("Title");
@@ -52,18 +66,16 @@ public class InfoPanelSetup : EditorWindow
         RectTransform titleRect = title.AddComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.pivot = new Vector2(0.5f, 1);
-        titleRect.anchoredPosition = new Vector2(0, -10);
-        titleRect.sizeDelta = new Vector2(-60, 35);
+        titleRect.pivot = new Vector2(0, 1);
+        titleRect.anchoredPosition = new Vector2(15, -15);
+        titleRect.sizeDelta = new Vector2(-70, 40);
 
         TextMeshProUGUI titleText = title.AddComponent<TextMeshProUGUI>();
-        titleText.text = "物体信息";
-        titleText.fontSize = 20;
+        titleText.text = "Object Info";
+        titleText.fontSize = 22;
         titleText.fontStyle = FontStyles.Bold;
         titleText.alignment = TextAlignmentOptions.Left;
-        titleText.color = Color.white;
-        // 使用 Arial 字体（支持基本拉丁字符）
-        titleText.font = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+        titleText.color = new Color(1f, 0.9f, 0.3f);
 
         // 创建详细信息文本
         GameObject detail = new GameObject("DetailText");
@@ -73,15 +85,15 @@ public class InfoPanelSetup : EditorWindow
         detailRect.anchorMin = new Vector2(0, 0);
         detailRect.anchorMax = new Vector2(1, 1);
         detailRect.pivot = new Vector2(0, 1);
-        detailRect.anchoredPosition = new Vector2(10, -55);
-        detailRect.sizeDelta = new Vector2(-20, -65);
+        detailRect.anchoredPosition = new Vector2(15, -65);
+        detailRect.sizeDelta = new Vector2(-30, -80);
 
         TextMeshProUGUI detailText = detail.AddComponent<TextMeshProUGUI>();
-        detailText.text = "Click object to view details";
-        detailText.fontSize = 14;
+        detailText.text = "Click an object to view details";
+        detailText.fontSize = 16;
         detailText.alignment = TextAlignmentOptions.TopLeft;
         detailText.color = Color.white;
-        detailText.font = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+        detailText.enableWordWrapping = true;
 
         // 创建关闭按钮
         GameObject closeBtn = new GameObject("CloseButton");
@@ -91,10 +103,18 @@ public class InfoPanelSetup : EditorWindow
         closeBtnRect.anchorMin = new Vector2(1, 1);
         closeBtnRect.anchorMax = new Vector2(1, 1);
         closeBtnRect.pivot = new Vector2(1, 1);
-        closeBtnRect.anchoredPosition = new Vector2(-5, -5);
-        closeBtnRect.sizeDelta = new Vector2(35, 35);
+        closeBtnRect.anchoredPosition = new Vector2(-10, -10);
+        closeBtnRect.sizeDelta = new Vector2(40, 40);
 
         Button closeButton = closeBtn.AddComponent<Button>();
+        
+        // 设置按钮颜色
+        ColorBlock colors = closeButton.colors;
+        colors.normalColor = new Color(0.8f, 0.2f, 0.2f, 1f);
+        colors.highlightedColor = new Color(1f, 0.3f, 0.3f, 1f);
+        colors.pressedColor = new Color(0.6f, 0.1f, 0.1f, 1f);
+        closeButton.colors = colors;
+        
         Image closeBtnImage = closeBtn.AddComponent<Image>();
         closeBtnImage.color = new Color(0.8f, 0.2f, 0.2f, 1f);
 
@@ -109,7 +129,7 @@ public class InfoPanelSetup : EditorWindow
 
         TextMeshProUGUI closeBtnTMP = closeBtnText.AddComponent<TextMeshProUGUI>();
         closeBtnTMP.text = "X";
-        closeBtnTMP.fontSize = 20;
+        closeBtnTMP.fontSize = 24;
         closeBtnTMP.fontStyle = FontStyles.Bold;
         closeBtnTMP.alignment = TextAlignmentOptions.Center;
         closeBtnTMP.color = Color.white;
@@ -120,13 +140,13 @@ public class InfoPanelSetup : EditorWindow
         infoPanel.detailText = detailText;
         infoPanel.closeButton = closeButton;
 
-        // 添加 CanvasGroup
-        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
-
         // 初始隐藏
         panel.SetActive(false);
 
-        Debug.Log("信息面板创建成功！位于右上角。请使用英文输入信息，或导入中文字体。");
+        Debug.Log("✓ 信息面板创建成功！位于右上角。");
+        Debug.Log("✓ 关闭按钮已配置。");
+        Debug.Log("提示：请使用英文输入信息，或导入中文字体到 TextMesh Pro。");
+        
         Selection.activeGameObject = panelRoot;
     }
 }

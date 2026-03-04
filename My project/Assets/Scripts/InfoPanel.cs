@@ -28,6 +28,9 @@ public class InfoPanel : MonoBehaviour
     private CanvasGroup canvasGroup;
     private bool isAnimating = false;
 
+    // 面板关闭事件
+    public System.Action onPanelClosed;
+
     void Awake()
     {
         Debug.Log("InfoPanel Awake 被调用");
@@ -52,24 +55,30 @@ public class InfoPanel : MonoBehaviour
             if (canvasGroup == null)
                 canvasGroup = panelRoot.AddComponent<CanvasGroup>();
 
-            // 绑定关闭按钮
-            if (closeButton != null)
-            {
-                closeButton.onClick.RemoveAllListeners();
-                closeButton.onClick.AddListener(HideInfo);
-                Debug.Log("关闭按钮已绑定");
-            }
-            else
-            {
-                Debug.LogWarning("未找到关闭按钮");
-            }
-
             // 初始隐藏
             panelRoot.SetActive(false);
         }
         else
         {
             Debug.LogError("InfoPanel: panelRoot 未设置！");
+        }
+    }
+
+    void Start()
+    {
+        // 在 Start 中绑定按钮，确保所有组件都已初始化
+        if (closeButton != null)
+        {
+            closeButton.onClick.RemoveAllListeners();
+            closeButton.onClick.AddListener(() => {
+                Debug.Log("关闭按钮被点击！");
+                HideInfo();
+            });
+            Debug.Log($"关闭按钮已绑定，按钮名称: {closeButton.name}");
+        }
+        else
+        {
+            Debug.LogError("关闭按钮为 null！请检查 Inspector 中的设置");
         }
     }
 
@@ -93,6 +102,17 @@ public class InfoPanel : MonoBehaviour
         if (panelRoot != null && !panelRoot.activeSelf)
         {
             panelRoot.SetActive(true);
+            
+            // 重新绑定按钮（以防万一）
+            if (closeButton != null)
+            {
+                closeButton.onClick.RemoveAllListeners();
+                closeButton.onClick.AddListener(() => {
+                    Debug.Log("关闭按钮被点击（从 ShowInfo）！");
+                    HideInfo();
+                });
+            }
+            
             StartCoroutine(FadeIn());
         }
     }
@@ -107,6 +127,21 @@ public class InfoPanel : MonoBehaviour
         if (panelRoot != null && panelRoot.activeSelf && !isAnimating)
         {
             StartCoroutine(FadeOut());
+        }
+    }
+
+    /// <summary>
+    /// 立即隐藏（无动画）
+    /// </summary>
+    public void HideInfoImmediate()
+    {
+        Debug.Log("立即隐藏面板");
+        if (panelRoot != null)
+        {
+            panelRoot.SetActive(false);
+            
+            // 触发关闭事件
+            onPanelClosed?.Invoke();
         }
     }
 
@@ -149,6 +184,9 @@ public class InfoPanel : MonoBehaviour
         canvasGroup.alpha = 0f;
         panelRoot.SetActive(false);
         isAnimating = false;
+        
+        // 触发关闭事件
+        onPanelClosed?.Invoke();
     }
 
     /// <summary>

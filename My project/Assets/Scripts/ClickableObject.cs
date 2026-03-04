@@ -104,10 +104,26 @@ public class ClickableObject : MonoBehaviour
         {
             Debug.Log($"找到 InfoPanel，显示信息");
             infoPanelManager.ShowInfo(objectName, detailInfo);
+            
+            // 监听面板关闭事件
+            infoPanelManager.onPanelClosed = OnPanelClosed;
         }
         else
         {
             Debug.LogWarning("场景中没有找到 InfoPanel，请使用 Tools > 创建信息面板 UI");
+        }
+    }
+
+    /// <summary>
+    /// 面板关闭时的回调
+    /// </summary>
+    void OnPanelClosed()
+    {
+        Debug.Log($"面板关闭，取消选中: {objectName}");
+        Deselect();
+        if (currentSelected == this)
+        {
+            currentSelected = null;
         }
     }
 

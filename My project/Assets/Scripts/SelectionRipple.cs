@@ -1,16 +1,15 @@
 using UnityEngine;
 
 /// <summary>
-/// 选中波纹效果 - 创建一个动态扩散的圆环
+/// 选中波纹效果 - 在物体表面创建动态扩散的圆环
 /// </summary>
 public class SelectionRipple : MonoBehaviour
 {
-    private Material rippleMaterial;
     private Color rippleColor;
     private float maxSize;
-    private float currentSize;
     private float pulseSpeed = 2f;
-    private LineRenderer lineRenderer;
+    private GameObject[] rippleRings;
+    private int ringCount = 3;
 
     /// <summary>
     /// 初始化波纹
@@ -19,87 +18,97 @@ public class SelectionRipple : MonoBehaviour
     {
         rippleColor = color;
         maxSize = size;
-        currentSize = 0f;
 
-        CreateRipple(material);
+        CreateRippleRings();
     }
 
     /// <summary>
-    /// 创建波纹效果
+    /// 创建多个波纹环
     /// </summary>
-    void CreateRipple(Material material)
+    void CreateRippleRings()
     {
-        // 使用 LineRenderer 创建圆环
-        lineRenderer = gameObject.AddComponent<LineRenderer>();
-        
-        // 设置材质
-        if (material != null)
+        rippleRings = new GameObject[ringCount];
+
+        for (int i = 0; i < ringCount; i++)
         {
-            lineRenderer.material = material;
+            GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = $"RippleRing_{i}";
+            ring.transform.SetParent(transform);
+            ring.transform.localPosition = Vector3.zero;
+            
+            // 移除 Collider
+            Collider col = ring.GetComponent<Collider>();
+            if (col != null)
+                Destroy(col);
+
+            // 设置材质
+            Renderer renderer = ring.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                mat.color = rippleColor;
+                // 启用透明
+                mat.SetFloat("_Surface", 1); // Transparent
+                mat.SetFloat("_Blend", 0); // Alpha
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.renderQueue = 3000;
+                renderer.material = mat;
+            }
+
+            // 扁平化圆柱体使其像圆环
+            ring.transform.localScale = new Vector3(maxSize * 0.5f, 0.01f, maxSize * 0.5f);
+
+            rippleRings[i] = ring;
         }
-        else
-        {
-            // 使用 Unlit/Color shader 以便在 URP 中正常显示
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null)
-                shader = Shader.Find("Unlit/Color");
-            lineRenderer.material = new Material(shader);
-        }
-
-        // 设置颜色
-        lineRenderer.startColor = rippleColor;
-        lineRenderer.endColor = rippleColor;
-
-        // 设置宽度
-        lineRenderer.startWidth = 0.15f;
-        lineRenderer.endWidth = 0.15f;
-
-        // 设置为圆环
-        lineRenderer.loop = true;
-        lineRenderer.useWorldSpace = false;
-
-        // 创建圆形
-        int segments = 64;
-        lineRenderer.positionCount = segments;
-
-        UpdateRippleSize(maxSize * 0.8f);
     }
 
     void Update()
     {
-        if (lineRenderer == null) return;
+        if (rippleRings == null || rippleRings.Length == 0) return;
 
-        // 脉动效果
-        float pulse = Mathf.Sin(Time.time * pulseSpeed) * 0.2f + 0.8f;
-        float targetSize = maxSize * pulse;
-        
-        UpdateRippleSize(targetSize);
+        float time = Time.time * pulseSpeed;
 
-        // 透明度脉动
-        Color color = rippleColor;
-        color.a = rippleColor.a * pulse;
-        lineRenderer.startColor = color;
-        lineRenderer.endColor = color;
+        for (int i = 0; i < rippleRings.Length; i++)
+        {
+            if (rippleRings[i] == null) continue;
+
+            // 每个环有不同的相位
+            float phase = (float)i / ringCount * Mathf.PI * 2;
+            float pulse = Mathf.Sin(time + phase) * 0.3f + 0.7f;
+            
+            // 缩放
+            float scale = maxSize * pulse * (1f + i * 0.2f);
+            rippleRings[i].transform.localScale = new Vector3(scale, 0.01f, scale);
+
+            // 透明度
+            Renderer renderer = rippleRings[i].GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Color color = rippleColor;
+                color.a = rippleColor.a * pulse * (1f - (float)i / ringCount * 0.5f);
+                renderer.material.color = color;
+            }
+        }
     }
 
-    /// <summary>
-    /// 更新波纹大小 - 在物体周围的水平面上
-    /// </summary>
-    void UpdateRippleSize(float size)
+    void OnDestroy()
     {
-        if (lineRenderer == null) return;
-
-        int segments = lineRenderer.positionCount;
-        float angleStep = 360f / segments;
-
-        for (int i = 0; i < segments; i++)
+        // 清理材质
+        if (rippleRings != null)
         {
-            float angle = i * angleStep * Mathf.Deg2Rad;
-            float x = Mathf.Cos(angle) * size;
-            float z = Mathf.Sin(angle) * size;
-            
-            // 在物体底部创建圆环
-            lineRenderer.SetPosition(i, new Vector3(x, 0f, z));
+            foreach (var ring in rippleRings)
+            {
+                if (ring != null)
+                {
+                    Renderer renderer = ring.GetComponent<Renderer>();
+                    if (renderer != null && renderer.material != null)
+                    {
+                        Destroy(renderer.material);
+                    }
+                }
+            }
         }
     }
 }
