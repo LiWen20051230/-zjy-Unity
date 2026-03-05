@@ -37,6 +37,7 @@ public class SceneTransitionManager : MonoBehaviour
 
     private Canvas fadeCanvas;
     private Image fadeImage;
+    private GraphicRaycaster fadeRaycaster;
     private static SceneTransitionManager instance;
 
     public static SceneTransitionManager Instance
@@ -85,7 +86,7 @@ public class SceneTransitionManager : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         
         // 添加GraphicRaycaster
-        canvasObj.AddComponent<GraphicRaycaster>();
+        fadeRaycaster = canvasObj.AddComponent<GraphicRaycaster>();
 
         // 创建黑色遮罩Image
         GameObject imageObj = new GameObject("FadeImage");
@@ -103,6 +104,12 @@ public class SceneTransitionManager : MonoBehaviour
 
         // 初始设置为透明（不可见）
         SetFadeAlpha(0f);
+        
+        // 初始禁用 Raycaster，避免阻挡UI交互
+        if (fadeRaycaster != null)
+        {
+            fadeRaycaster.enabled = false;
+        }
         
         // Canvas必须是根物体才能使用DontDestroyOnLoad
         DontDestroyOnLoad(canvasObj);
@@ -305,6 +312,12 @@ public class SceneTransitionManager : MonoBehaviour
     /// </summary>
     public IEnumerator FadeOut()
     {
+        // 启用 Raycaster，防止在淡出过程中点击穿透
+        if (fadeRaycaster != null)
+        {
+            fadeRaycaster.enabled = true;
+        }
+
         float elapsed = 0f;
 
         while (elapsed < fadeDuration)
@@ -334,6 +347,12 @@ public class SceneTransitionManager : MonoBehaviour
         }
 
         SetFadeAlpha(0f);
+        
+        // 淡入完成后禁用 Raycaster，避免阻挡UI交互
+        if (fadeRaycaster != null)
+        {
+            fadeRaycaster.enabled = false;
+        }
     }
 
     /// <summary>
